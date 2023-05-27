@@ -1,0 +1,261 @@
+<h1>Italang Interpreter</h1>
+
+<div id="output" style="white-space: pre; width: 100%"></div>
+</div>
+<input id="script" type="text" style="width: 80%;"/>
+<button id="runButton" onclick="executeScript()" style="width: 10%">Run!</button>
+<script>
+
+var isTerminated = false;
+
+class NomeErrore extends Error {}
+class ValoreErrore extends Error {}
+
+function Plus(...v) {
+    return v.reduce((acc, curr) => acc + curr, 0);
+}
+
+function Minus(...v) {
+    if (v.length === 0) {
+        throw new ValoreErrore("Troppi pochi argomenti dati a Minus");
+    }
+    if (v.length === 1) {
+        return -v[0];
+    }
+    return v[0] - v.slice(1).reduce((acc, curr) => acc + curr, 0);
+}
+
+function Times(...v) {
+    return v.reduce((acc, curr) => acc * curr, 1);
+}
+
+function Divides(...v) {
+    if (v.length === 0) {
+        throw new ValoreErrore("Troppi pochi argomenti dati a Divides");
+    }
+    if (v.length === 1) {
+        return 1 / v[0];
+    }
+    return v[0] / v.slice(1).reduce((acc, curr) => acc * curr, 1);
+}
+
+function Average(...v) {
+    return v.reduce((acc, curr) => acc + curr, 0) / v.length;
+}
+
+function Equal(a, b) {
+    return a === b;
+}
+
+function Mod(a, b) {
+    return a % b;
+}
+
+function Neg(a) {
+    return !a;
+}
+
+function Pow(a, b) {
+    return Math.pow(a, b);
+}
+
+function Print(...v) {
+    const count = v.length;
+    let i = 0;
+    for (const elem of v) {
+        i += 1;
+        if (elem !== null && elem !== undefined && !(elem instanceof TerminatorCharacter)) {
+            document.getElementById("output").textContent += elem.toString();
+        }
+        if (i < count) {
+            document.getElementById("output").textContent += " ";
+        }
+    }
+    document.getElementById("output").textContent += "\n";
+}
+
+function GetNum(...v) {
+    Print(...v, end='');
+    return parseInt(prompt("Per favore inserisci un numero:"));
+}
+
+function GetString(...v) {
+    Print(...v, end='');
+    return prompt("Inserisci una stringa:");
+}
+
+function GetToken(...v) {
+    Print(...v, end='');
+    return prompt("Inserisci un simbolo:").split(' ')[0];
+}
+
+function Exit(..._) {
+    document.getElementById("output").textContent += "=== Program terminated ===\n";
+    isTerminated = true;
+    document.getElementById("script").setAttribute("disabled", true);
+    document.getElementById("runButton").setAttribute("disabled", true);
+}
+
+var function_list = {
+    'plus': Plus,
+    'minus': Minus,
+    'times': Times,
+    'divides': Divides,
+    'average': Average,
+    'equal': Equal,
+    'pow': Pow,
+    'mod': Mod,
+    'neg': Neg,
+    'exit': Exit,
+    'print': Print,
+    'getnum': GetNum,
+    'getstring': GetString,
+    'gettoken': GetToken
+};
+var variable_list = {};
+
+const NUMBER_MAPPING_TABLE = [
+    'zero', 'uno', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette', 'otto', 'nove', 'dieci', 
+    'undici', 'dodici', 'tredici', 'quattordici', 'quindici', 'sedici', 'diciassette', 'diciotto', 'diciannove', 'venti',
+    'ventuno', 'ventidue', 'ventitre', 'ventiquattro', 'venticinque', 'ventisei', 'ventisette', 'ventotto', 'ventinove', 'trenta',
+    'trentuno', 'trentadue', 'trentatre', 'trentaquattro', 'trentacinque', 'trentasei', 'trentasette', 'trentotto', 'trentanove', 'quaranta',
+    'quarantuno'
+];
+
+class TerminatorCharacter {
+    constructor(chr) {
+        this.internal_chr = chr;
+    }
+    toString() {
+        return null;
+    }
+    repr() {
+        return null;
+    }
+}
+const TERMINATE_CALL = new TerminatorCharacter('.');
+const TERMINATE_IF = new TerminatorCharacter('?');
+const TERMINATE_WHILE = new TerminatorCharacter('!');
+
+
+function pop_until_next(tok_list, indent, expect) {
+    let result = [];
+    let count = 1;
+    while (tok_list && tok_list.length !== 0) {
+        let token = tok_list.shift();
+        if (token.endsWith(indent)) {
+            count += 1;
+        } else if (token === expect) {
+            count -= 1;
+            if (count === 0) {
+                return result;
+            }
+        }
+        result.push(token);
+    }
+}
+
+function evaluate(tok) {
+    console.log(tok)
+    if (isTerminated) { throw new Error("It's over."); return; }
+    let head = tok.shift();
+    if (head.endsWith('ata')) {
+        let func_name = head.slice(0, -3);
+        if (!Object.keys(function_list).includes(func_name)) {
+            throw new NomeErrore('Nessuna funzione denominata "' + func_name + '".');
+        }
+        let args = [];
+        let args_tokens = pop_until_next(tok, 'ata', '.');
+        while (args_tokens && args_tokens.length !== 0) {
+            args.push(evaluate(args_tokens));
+        }
+        return function_list[func_name](...args);
+    } else if (head.endsWith('ile')) {
+        let var_name = head.slice(0, -3);
+        let value = evaluate(tok);
+        variable_list[var_name] = value;
+    } else if (head.endsWith('eria')) {
+        let var_name = head.slice(0, -4);
+        if (!variable_list.hasOwnProperty(var_name)) {
+            throw new NomeErrore('Nessuna variabile denominata "' + var_name + '".');
+        }
+        return variable_list[var_name];
+    } else if (head.endsWith('ista')) {
+        let var_name = head.slice(0, -4);
+        if (!variable_list.hasOwnProperty(var_name)) {
+            throw new NomeErrore('Nessuna variabile denominata "' + var_name + '".');
+        }
+        let cond_body = pop_until_next(tok, 'ista', '?');
+        let result = null;
+        if (variable_list[var_name]) {
+            while (cond_body.length) {
+                result = evaluate(cond_body);
+            }
+        }
+        return result;
+    } else if (head.endsWith('ismo')) {
+        const var_name = head.slice(0, -4);
+        if (!Object.keys(variable_list).includes(var_name)) {
+            throw new NomeErrore('Nessuna variabile denominata "' + var_name + '".');
+        }
+        const loop_body = pop_until_next(tok, 'ismo', '!');
+        let result = null;
+        while (variable_list[var_name]) {
+            if (variable_list[var_name]) {
+                const body = loop_body.slice();
+                while (body.length) {
+                    result = evaluate(body);
+                }
+            }
+        }
+        return result;
+    } else if (NUMBER_MAPPING_TABLE.includes(head)) {
+        return NUMBER_MAPPING_TABLE.indexOf(head);
+    } else if (head === '.') {
+        return TERMINATE_CALL;
+    } else if (head === '?') {
+        return TERMINATE_IF;
+    } else if (head === '!') {
+        return TERMINATE_WHILE;
+    } else {
+        return head;
+    }
+}
+
+function sanitize(s) {
+    let result = [];
+    const ascii_lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    for (let ch of s.toLowerCase()) {
+      if (ascii_lowercase.includes(ch) || ' .?!'.includes(ch)) {
+        result.push(ch);
+      }
+    }
+    return result.join('');
+  }
+  
+  function split_token(s) {
+    return s.replaceAll('.', ' . ')
+            .replaceAll('?', ' ? ')
+            .replaceAll('!', ' ! ')
+            .split(' ')
+            .filter(tok => tok !== '');
+  }
+  
+  function executeScript() {
+    const raw_input = document.getElementById("script").value.trim();
+    const script = sanitize(raw_input);
+    if (raw_input !== script) {
+        document.getElementById("output").textContent += `Avviso: trovato carattere non valido.\nÈ stato rimosso come: ${JSON.stringify(script)}\n`;
+    }
+    const tokens = split_token(script);
+    console.log(tokens)
+    while (tokens.length > 0) {
+    const result = evaluate(tokens);
+    if (result !== null && result !== undefined && !(result instanceof TerminatorCharacter)) {
+        console.log(result);
+        console.log(result.toString());
+        document.getElementById("output").textContent += result.toString() + "\n";
+    }
+    }
+  }
+</script>
