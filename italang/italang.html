@@ -21,6 +21,8 @@ class ValoreErrore extends Error {
     }
 }
 
+class Terminated extends Error {}
+
 function Plus(...v) {
     return v.reduce((acc, curr) => acc + curr, 0);
 }
@@ -167,7 +169,7 @@ function pop_until_next(tok_list, indent, expect) {
 
 function evaluate(tok) {
     console.log(tok)
-    if (isTerminated) { throw new Error("It's over."); return; }
+    if (isTerminated) { throw new Terminated("It's over."); return; }
     let head = tok.shift();
     if (head.endsWith('ata')) {
         let func_name = head.slice(0, -3);
@@ -269,7 +271,9 @@ function sanitize(s) {
     }
     }
     } catch (e) {
-        alert("Si è verificato un errore durante l'esecuzione dello script.\n" + e.toString());
+        if (!(e instanceof Terminated)) {
+            alert("Si è verificato un errore durante l'esecuzione dello script.\n" + e.toString());
+        }
     }
   }
 </script>
