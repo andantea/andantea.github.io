@@ -8,8 +8,18 @@
 
 var isTerminated = false;
 
-class NomeErrore extends Error {}
-class ValoreErrore extends Error {}
+class NomeErrore extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "NomeErrore";
+    }
+}
+class ValoreErrore extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "ValoreErrore";
+    }
+}
 
 function Plus(...v) {
     return v.reduce((acc, curr) => acc + curr, 0);
@@ -242,6 +252,7 @@ function sanitize(s) {
   }
   
   function executeScript() {
+    try {
     const raw_input = document.getElementById("script").value.trim();
     const script = sanitize(raw_input);
     if (raw_input !== script) {
@@ -256,6 +267,9 @@ function sanitize(s) {
         console.log(result.toString());
         document.getElementById("output").textContent += result.toString() + "\n";
     }
+    }
+    } catch (e) {
+        alert("Si è verificato un errore durante l'esecuzione dello script.\n" + e.toString());
     }
   }
 </script>
